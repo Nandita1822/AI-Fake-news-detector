@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fake News Detector for Students</title>
+<style>
+    * {margin:0; padding:0; box-sizing:border-box;}
+    body {font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height:100vh; padding:20px;}
+    .container {max-width:900px; margin:0 auto;}
+    .header {text-align:center; color:white; margin-bottom:30px;}
+    .header h1 {font-size:2.5em; margin-bottom:10px;}
+    .header p {font-size:1.2em; opacity:0.9;}
+    .main-card {background:white; border-radius:20px; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+    .input-section {margin-bottom:20px;}
+    .input-section label {display:block; font-size:1.1em; margin-bottom:10px; color:#333; font-weight:600;}
+    textarea {width:100%; min-height:200px; padding:15px; font-size:1em; border:2px solid #e0e0e0; border-radius:10px; resize:vertical; font-family:inherit; transition:border-color 0.3s;}
+    textarea:focus {outline:none; border-color:#667eea;}
+    .button-container {text-align:center; margin:20px 0;}
+    .analyze-btn {background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; padding:15px 50px; font-size:1.1em; border-radius:50px; cursor:pointer; transition:transform 0.2s, box-shadow 0.2s; font-weight:600;}
+    .analyze-btn:hover {transform:translateY(-2px); box-shadow:0 10px 20px rgba(102,126,234,0.4);}
+    .analyze-btn:active {transform:translateY(0);}
+    .analyze-btn:disabled {opacity:0.6; cursor:not-allowed;}
+    .loading {text-align:center; display:none; margin:20px 0;}
+    .loading-spinner {border:4px solid #f3f3f3; border-top:4px solid #667eea; border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto;}
+    @keyframes spin {0% {transform:rotate(0deg);} 100% {transform:rotate(360deg);}}
+    .results {display:none; margin-top:30px;}
+    .score-container {text-align:center; margin-bottom:30px; padding:20px; border-radius:15px; background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);}
+    .score-label {font-size:1.2em; color:#555; margin-bottom:10px;}
+    .score-value {font-size:3em; font-weight:bold; margin-bottom:10px;}
+    .score-status {font-size:1.3em; font-weight:600; padding:10px 20px; border-radius:30px; display:inline-block;}
+    .result-section {margin-bottom:25px; padding:20px; background:#f8f9fa; border-radius:10px; border-left:4px solid #667eea;}
+    .result-section h3 {color:#667eea; margin-bottom:12px; font-size:1.3em;}
+    .result-section p, .result-section ul {color:#555; line-height:1.6; font-size:1.05em;}
+    .result-section ul {margin-left:20px;}
+    .result-section li {margin-bottom:8px;}
+    .error {background:#fee; border:2px solid #fcc; color:#c33; padding:15px; border-radius:10px; margin-top:20px; display:none;}
+    .info-box {background:#e3f2fd; border-left:4px solid #2196f3; padding:15px; border-radius:5px; margin-bottom:20px;}
+    .info-box p {color:#1565c0; margin:5px 0;}
+    @media (max-width:768px) {
+        .header h1 {font-size:2em;}
+        .main-card {padding:20px;}
+        .score-value {font-size:2.5em;}
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔍 Fake News Detector</h1>
+        <p>Helping students identify reliable information</p>
+    </div>
+
+    <div class="main-card">
+        <div class="info-box">
+            <p><strong>How to use:</strong></p>
+            <p>1. Copy and paste any news article or social media post below</p>
+            <p>2. Click "Analyze Article" to check its credibility</p>
+            <p>3. Review the results to understand if the information is reliable</p>
+        </div>
+
+        <div class="input-section">
+            <label for="article">Paste the article or news text here:</label>
+            <textarea id="article" placeholder="Copy and paste a news article, social media post, or text to verify..."></textarea>
+        </div>
+
+        <div class="button-container">
+            <button class="analyze-btn" onclick="analyzeArticle()">Analyze Article</button>
+        </div>
+
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p style="margin-top:10px; color:#667eea; font-weight:600;">Analyzing article...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="score-container">
+                <div class="score-label">Credibility Score</div>
+                <div class="score-value" id="score">--</div>
+                <div class="score-status" id="status">--</div>
+            </div>
+
+            <div class="result-section">
+                <h3>📊 Summary</h3>
+                <p id="summary">--</p>
+            </div>
+
+            <div class="result-section">
+                <h3>💡 Explanation</h3>
+                <p id="explanation">--</p>
+            </div>
+
+            <div class="result-section">
+                <h3>⚠️ Key Points to Consider</h3>
+                <div id="warning-signs">--</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function analyzeArticle() {
+    const articleText = document.getElementById('article').value.trim();
+    const resultsDiv = document.getElementById('results');
+    const errorDiv = document.getElementById('error');
+    const loadingDiv = document.querySelector('.loading');
+    const analyzeBtn = document.querySelector('.analyze-btn');
+
+    // Reset
+    resultsDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
+    if (!articleText || articleText.length < 10) {
+        errorDiv.textContent = 'Please enter at least 10 characters of text to analyze.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    loadingDiv.style.display = 'block';
+    analyzeBtn.disabled = true;
+
+    try {
+        const response = await fetch('/analyze', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ article: articleText })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'An error occurred');
+
+        const analysis = data.analysis;
+
+        const score = analysis.credibility_score || 0;
+        document.getElementById('score').textContent = score + '/100';
+
+        const statusDiv = document.getElementById('status');
+        const scoreValueDiv = document.querySelector('.score-value');
+
+        // Update status based on score
+        if (score >= 70) {
+            statusDiv.textContent = 'Likely Reliable';
+            statusDiv.style.background = '#4caf50';
+            statusDiv.style.color = 'white';
+            scoreValueDiv.style.color = '#4caf50';
+        } else if (score >= 40) {
+            statusDiv.textContent = 'Questionable';
+            statusDiv.style.background = '#ff9800';
+            statusDiv.style.color = 'white';
+            scoreValueDiv.style.color = '#ff9800';
+        } else {
+            statusDiv.textContent = 'Likely Unreliable';
+            statusDiv.style.background = '#f44336';
+            statusDiv.style.color = 'white';
+            scoreValueDiv.style.color = '#f44336';
+        }
+
+        document.getElementById('summary').textContent = analysis.summary || 'No summary available';
+        document.getElementById('explanation').textContent = analysis.explanation || 'No explanation available';
+
+        const warningSigns = analysis.warning_signs;
+        const warningDiv = document.getElementById('warning-signs');
+        warningDiv.innerHTML = '';
+
+        if (Array.isArray(warningSigns)) {
+            const ul = document.createElement('ul');
+            warningSigns.forEach(sign => {
+                const li = document.createElement('li');
+                li.textContent = sign;
+                ul.appendChild(li);
+            });
+            warningDiv.appendChild(ul);
+        } else if (typeof warningSigns === 'string') {
+            warningDiv.textContent = warningSigns;
+        } else {
+            warningDiv.textContent = 'No specific warning signs identified';
+        }
+
+        resultsDiv.style.display = 'block';
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (error) {
+        errorDiv.textContent = error.message || 'An error occurred while analyzing the article.';
+        errorDiv.style.display = 'block';
+    } finally {
+        loadingDiv.style.display = 'none';
+        analyzeBtn.disabled = false;
+    }
+}
+
+// Ctrl/Cmd+Enter shortcut
+document.getElementById('article').addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyzeArticle();
+});
+</script>
+</body>
+</html>
