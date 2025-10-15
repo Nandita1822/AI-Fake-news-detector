@@ -6,7 +6,7 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 # -----------------------------
 # Hugging Face token
 # -----------------------------
-HF_TOKEN = "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"
+HF_TOKEN = ""
 
 # -----------------------------
 # Load tokenizer and model with token
